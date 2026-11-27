@@ -1,6 +1,4 @@
-name: Enable AndroidX
-run: echo "android.useAndroidX=true" 
->> "$PROJECT_DIR/gradle.properties"
+
 name: Build Android APK
 
 on:
@@ -21,18 +19,28 @@ jobs:
       - name: Extract Android project
         run: |
           mkdir extracted
+
           ZIP_FILE=$(find . -maxdepth 1 -iname '*.zip' | head -n 1)
+
           if [ -z "$ZIP_FILE" ]; then
             echo "ZIP archive not found"
             exit 1
           fi
+
           unzip -q "$ZIP_FILE" -d extracted
+
           PROJECT_DIR=$(dirname "$(find extracted -name settings.gradle.kts -print -quit)")
+
           if [ -z "$PROJECT_DIR" ]; then
             echo "Android project not found"
             exit 1
           fi
+
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Enable AndroidX
+        run: |
+          echo "android.useAndroidX=true" >> "$PROJECT_DIR/gradle.properties"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -46,10 +54,12 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build APK
-        run: gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug
+        run: |
+          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: OBD-Starter-APK
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
